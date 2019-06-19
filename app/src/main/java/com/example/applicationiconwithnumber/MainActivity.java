@@ -4,28 +4,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ShortcutInfo;
-import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.Typeface;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.Icon;
-import android.net.Uri;
-import android.provider.SyncStateContract;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,21 +27,65 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.add).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                shortcutAdd("Application Icon with Number", count);
+                // shortcutAdd("Application Icon with Number", count);
+                deleteShortcut(getApplicationContext());
             }
         });
 
         findViewById(R.id.increment).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                shortcutDel("Application Icon with Number");
+                deleteShortcut(getApplicationContext());
+                //shortcutDel("Application Icon with Number");
                 count++;
                 ((TextView) findViewById(R.id.number)).setText(Integer.toString(count));
-                shortcutAdd("Application Icon with Number", count);
+                //shortcutAdd("Application Icon with Number", count);
+                addShortcut(getApplicationContext(), count);
             }
         });
 
         ((TextView) findViewById(R.id.number)).setText(Integer.toString(count));
+    }
+
+    // https://stackoverflow.com/questions/14499123/installing-shortcut-wihout-duplicating-native-handly-created-one
+    public void addShortcut(Context context, int number)
+    {
+        Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
+        // shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        CreateBitmapForShortcut cbfs = new CreateBitmapForShortcut(R.mipmap.ic_launcher);
+        Bitmap bitmap = cbfs.generate(this, number);
+        ImageView icn = findViewById(R.id.icon);
+        icn.setImageBitmap(bitmap);
+        this.manageShortcutAction(context, Intent.ACTION_CREATE_SHORTCUT, shortcutIntent, bitmap);
+    }
+    public void deleteShortcut(Context context)
+    {
+        Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
+        // shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        CreateBitmapForShortcut cbfs = new CreateBitmapForShortcut(R.mipmap.ic_launcher);
+        Bitmap bitmap = cbfs.generate(this, 0);
+        // this.manageShortcutAction(context, "com.android.launcher.action.UNINSTALL_SHORTCUT", shortcutIntent, bitmap);
+        this.manageShortcutAction(context, "com.android.launcher.action.UNINSTALL_SHORTCUT", shortcutIntent, bitmap);
+    }
+    private void manageShortcutAction(Context context, String intentAction, Intent launchIntent, Bitmap bitmap)
+    {
+        Context applicationContext = context.getApplicationContext();
+        ApplicationInfo appInfo = applicationContext.getApplicationInfo();
+        PackageManager packageManager= applicationContext.getPackageManager();
+        String applicationName = (String) packageManager.getApplicationLabel(appInfo);
+
+        Intent shortcut = new Intent(intentAction);
+//        shortcut.putExtra("duplicate", false); // Just create once
+        shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, applicationName); // Shortcut name
+        shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, launchIntent);// Setup activity should be shortcut object
+        shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON, bitmap);
+//        shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE, Intent.ShortcutIconResource.fromContext(applicationContext, appInfo.icon));// Set shortcut icon
+
+        applicationContext.sendBroadcast(shortcut);
     }
 
     // References: https://developer.android.com/guide/topics/ui/shortcuts/index.html
@@ -64,68 +93,29 @@ public class MainActivity extends AppCompatActivity {
     private void shortcutAdd(String name, int number) {
         PackageManager pm = getApplicationContext().getPackageManager();
         String packageName = this.getClass().getPackage().getName();
-        ShortcutManager shortcutManager = (ShortcutManager) getSystemService(Context.SHORTCUT_SERVICE);
-/*
-        ShortcutInfo shortcut = new ShortcutInfo.Builder(getApplicationContext(), "id1")
-                .setShortLabel("Website")
-                .setLongLabel("Open the website")
-                .setIcon(Icon.createWithResource(getApplicationContext(), R.drawable.ic_launcher_foreground))
-                .setIntent(new Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://www.mysite.example.com/")))
-                .build();
 
-        shortcutManager.setDynamicShortcuts(Arrays.asList(shortcut));
-*/
         try {
             ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
-
-            // Create bitmap with number in it -> very default. You probably want to give it a more stylish look
-            Bitmap bitmapIcon = null;// BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
-            DisplayMetrics metrics = getResources().getDisplayMetrics();
-            Log.d( "MIAPP", "" + metrics.densityDpi);
-
-            Drawable dr = getResources().getDrawableForDensity(R.mipmap.ic_launcher, DisplayMetrics.DENSITY_XXXHIGH);
-            BitmapDrawable bitmapDrawable = (BitmapDrawable) dr;
-            if(bitmapDrawable.getBitmap() != null) {
-                bitmapIcon = bitmapDrawable.getBitmap();
-            } else {
-                if(dr.getIntrinsicWidth() <= 0 || dr.getIntrinsicHeight() <= 0) {
-                    bitmapIcon = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888); // Single color bitmap will be created of 1x1 pixel
-                } else {
-                    bitmapIcon = Bitmap.createBitmap(dr.getIntrinsicWidth(), dr.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-                }
-
-                Canvas canvas = new Canvas(bitmapIcon);
-                dr.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-                dr.draw(canvas);
-            }
-            Bitmap bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
-            Paint paint = new Paint();
-            paint.setTextAlign(Paint.Align.CENTER);
-            new Canvas(bitmap).drawBitmap(Bitmap.createScaledBitmap(bitmapIcon, 100, 100, false), 0f, 0f, paint);
-            paint.setColor(0xFF606060); // light gray
-            paint.setStyle(Paint.Style.FILL);
-            new Canvas(bitmap).drawCircle( 75, 30, 25, paint);
-            paint.setColor(0xFF000000); // black
-            paint.setTextSize(50);
-            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
-            new Canvas(bitmap).drawText("" + number, 75, 50, paint);
+            CreateBitmapForShortcut cbfs = new CreateBitmapForShortcut(R.mipmap.ic_launcher);
+            Bitmap bitmap = cbfs.generate(this, number);
             ImageView icn = findViewById(R.id.icon);
             icn.setImageBitmap(bitmap);
 
             if (info != null) {
                 // Intent to Start activity
-                Intent shortcutIntent = pm
-                        .getLaunchIntentForPackage(packageName);
+                //Intent shortcutIntent = pm
+                //        .getLaunchIntentForPackage(packageName);
+                Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
+                shortcutIntent.setAction( Intent.ACTION_SEND);
                 if (shortcutIntent != null) {
-                    // Decorate the shortcut
+                    // Decorate the shortcutBuilder
                     Intent addIntent = new Intent();
                     addIntent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent);
                     addIntent.putExtra(Intent.EXTRA_SHORTCUT_NAME, info.loadLabel(pm));
                     addIntent.putExtra(Intent.EXTRA_SHORTCUT_ICON, bitmap);
                     addIntent.putExtra("duplicate", false);
 
-                    // Inform launcher to create shortcut
+                    // Inform launcher to create shortcutBuilder
 //                    addIntent.setAction("com.android.launcher.action.INSTALL_SHORTCUT");
                     addIntent.setAction(Intent.ACTION_CREATE_SHORTCUT);
                     getApplicationContext().sendBroadcast(addIntent);
@@ -133,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e( "MIAPP", " Error al añadir el icono del shortcut de la app",  e);
+            Log.e( "MIAPP", " Error al añadir el icono del shortcutBuilder de la app",  e);
         }
     }
 
