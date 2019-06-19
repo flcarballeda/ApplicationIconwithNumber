@@ -22,7 +22,7 @@ public class CreateBitmapForShortcut {
     private Paint.Align textAlign = Paint.Align.CENTER;
     private int textColor = 0;
     private int textX = 75;
-    private int textY = 40;
+    private int textY = 45;
     private int textSize = 40;
 
     public CreateBitmapForShortcut(int iconId) {
