@@ -58,8 +58,8 @@ public class MainActivity extends AppCompatActivity {
         Bitmap bitmap = cbfs.generate(this, number);
         ImageView icn = findViewById(R.id.icon);
         icn.setImageBitmap(bitmap);
-        // this.manageShortcutAction(context, "com.android.launcher.action.INSTALL_SHORTCUT", shortcutIntent, bitmap);
-        this.manageShortcutAction(context, Intent.ACTION_CREATE_SHORTCUT, shortcutIntent, bitmap);
+        this.manageShortcutAction(context, "com.android.launcher.action.INSTALL_SHORTCUT", shortcutIntent, bitmap);
+        // this.manageShortcutAction(context, Intent.ACTION_CREATE_SHORTCUT, shortcutIntent, bitmap);
     }
     public void deleteShortcut(Context context)
     {
