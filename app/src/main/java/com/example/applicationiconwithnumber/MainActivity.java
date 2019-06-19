@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -11,6 +12,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.lang.reflect.Array;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -29,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 // shortcutAdd("Application Icon with Number", count);
                 deleteShortcut(getApplicationContext());
+                Toast.makeText(getApplicationContext(), "Enviado el Broadcast", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -47,30 +52,33 @@ public class MainActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.number)).setText(Integer.toString(count));
     }
 
+    private Intent getShortcutIntent() {
+        Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
+//        shortcutIntent.setAction(Intent.ACTION_MAIN);
+        shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_TASK_ON_HOME);
+        return shortcutIntent;
+    }
+
     // https://stackoverflow.com/questions/14499123/installing-shortcut-wihout-duplicating-native-handly-created-one
     public void addShortcut(Context context, int number)
     {
-        Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
-        // shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         CreateBitmapForShortcut cbfs = new CreateBitmapForShortcut(R.mipmap.ic_launcher);
         Bitmap bitmap = cbfs.generate(this, number);
         ImageView icn = findViewById(R.id.icon);
         icn.setImageBitmap(bitmap);
-        this.manageShortcutAction(context, "com.android.launcher.action.INSTALL_SHORTCUT", shortcutIntent, bitmap);
+        this.manageShortcutAction(context, "com.android.launcher.action.INSTALL_SHORTCUT", getShortcutIntent(), bitmap);
         // this.manageShortcutAction(context, Intent.ACTION_CREATE_SHORTCUT, shortcutIntent, bitmap);
     }
     public void deleteShortcut(Context context)
     {
-        Intent shortcutIntent = new Intent(getApplicationContext(), MainActivity.class);
-        // shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        // shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        CreateBitmapForShortcut cbfs = new CreateBitmapForShortcut(R.mipmap.ic_launcher);
-        Bitmap bitmap = cbfs.generate(this, 0);
         // this.manageShortcutAction(context, "com.android.launcher.action.UNINSTALL_SHORTCUT", shortcutIntent, bitmap);
-        this.manageShortcutAction(context, "com.android.launcher.action.UNINSTALL_SHORTCUT", shortcutIntent, bitmap);
+        this.manageShortcutAction(context, "com.android.launcher.action.UNINSTALL_SHORTCUT", getShortcutIntent(), null);
+//        ShortcutManager scm = (ShortcutManager) getApplicationContext().getSystemService( SHORTCUT_SERVICE);
+//        scm.disableShortcuts();
     }
     private void manageShortcutAction(Context context, String intentAction, Intent launchIntent, Bitmap bitmap)
     {
@@ -80,10 +88,12 @@ public class MainActivity extends AppCompatActivity {
         String applicationName = (String) packageManager.getApplicationLabel(appInfo);
 
         Intent shortcut = new Intent(intentAction);
-//        shortcut.putExtra("duplicate", false); // Just create once
         shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, applicationName); // Shortcut name
         shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, launchIntent);// Setup activity should be shortcut object
-        shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON, bitmap);
+        if( null != bitmap) {
+            shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON, bitmap);
+            shortcut.putExtra("duplicate", false); // Just create once
+        }
 //        shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE, Intent.ShortcutIconResource.fromContext(applicationContext, appInfo.icon));// Set shortcut icon
 
         applicationContext.sendBroadcast(shortcut);
